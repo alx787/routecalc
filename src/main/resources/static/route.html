@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <title>Маршрут</title>
+
+        <script src='http://openlayers.org/api/OpenLayers.js'></script>
+
+        <script type="text/javascript" src="js/scripts/main.js"></script>
+        <script type="text/javascript" src="js/scripts/osm.js"></script>
+        <script type="text/javascript" src="js/scripts/departs.js"></script>
+
+        <script src="js/jq/jquery-3.5.1.min.js"></script>
+
+        <script type='text/javascript'>
+
+            $(document).ready(function(){
+
+                // инициализация карты
+                osm.module.init();
+                // инициализация кнопок и прочего
+                main.module.initDepartSelect();
+                main.module.initButtonEvents();
+            });
+
+        </script>
+        <link rel="stylesheet" type="text/css" href="css/styles.css">
+    </head>
+    <body>
+        <div id="map" style="height: 100vh">
+            <div class="wrapper">
+                <div class="header font-bold">Расчет маршрута</div>
+                <div id="slidebtn">&lt;-&gt;</div>
+
+                <div style="margin: 0 5px 5px 5px;">
+                    <label for="podrselect">Подразделение:</label>
+
+                    <select style="height: 23px; line-height: 11px; -moz-appearance: none;" name="podr" id="podrselect">
+                        <option value="000000019">Марийская автоколонна</option>
+                        <option value="000001901">__Йошкар-Ола</option>
+                        <option value="000001903">__Морки</option>
+                        <option value="000001904">__Оршанка</option>
+                    </select>
+
+                    <button id="btngoto" style="height: 23px; line-height: 11px;">Перейти</button>
+
+                    <button id="btncalc" style="float: right; margin-left: 5px; height: 23px; line-height: 11px;">Рассчитать</button>
+                    <button id="btnclear" style="float: right; height: 23px; line-height: 11px;">Очистить</button>
+                </div>
+
+                <div class="table-header">
+                    <div class="column30px">№</div>
+                    <div class="column60px">Сегмент</div>
+                    <div class="column200px">Место начала</div>
+                    <div class="column200px">Место окончания</div>
+                    <div class="column60px">Расстояние</div>
+                </div>
+
+                <div class="table-rows">
+                    <ul id="datacontainer" style="list-style-type: none; padding: 0; margin: 0;">
+                        <li>
+                            <div class="column30px">&nbsp;</div>
+                            <div class="column60px">1 - 2</div>
+                            <div class="column200px">адрес начала</div>
+                            <div class="column200px">адрес окончания</div>
+                            <div class="column60px">100 км</div>
+                            <div style="display: none">43.8545616446</div>
+                            <div style="display: none">56.3562883288</div>
+                            <div style="display: none">43.5946733187</div>
+                            <div style="display: none">56.5062299945</div>
+                        </li>
+                    </ul>
+                </div>
+
+                <div style="margin: 5px">
+
+                    <div>МАРШРУТ</div>
+                    <div style="margin-top: 5px">
+                        <label for="routebegin">из</label> <input class="routeaddress font-bold" type="text" id="routebegin" name="routebegin" value="адрес начала маршрута">
+                        <label for="routeend">в</label> <input class="routeaddress font-bold" type="text" id="routeend" name="routeend" value="адрес окончания маршрута">
+                        <label for="distance">расстояние (км)</label> <input class="distance font-bold" type="text" id="distance" name="distance" value="123">
+                    </div>
+
+                    <div style="float: right; margin-right: 10px; margin-top: 10px;">
+                        <button style="height: 23px; line-height: 11px;">копировать в буфер обмена для АТ</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!--
+        <button onclick="osm.module.clearPoints()">clear</button>
+        <button onclick="osm.module.moveToPlace()">move to home</button>
+        <button onclick="getRouting()">route</button>
+        <button onclick="getPlaceFromCoords(49.61351612545934, 58.58983153250043)">place from coords</button>
+        -->
+    </body>
+</html>
+
