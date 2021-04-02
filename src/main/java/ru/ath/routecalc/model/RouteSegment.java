@@ -14,7 +14,7 @@ public class RouteSegment {
 
     @Getter
     @Setter
-    private String distance;
+    private Double distance;
 
     @Getter
     @Setter
@@ -24,6 +24,7 @@ public class RouteSegment {
     @Setter
     private String placeend;
 
+    // координаты начала и окончания сегмента
     @Getter
     @Setter
     private Coordinates coordinatesBegin;
@@ -32,5 +33,13 @@ public class RouteSegment {
     @Setter
     private Coordinates coordinatesEnd;
 
+    // индексы координат начала и окончания в массиве координат для получения сегментов маршрута
+    @Getter
+    @Setter
+    private int wayPointBegin;
+
+    @Getter
+    @Setter
+    private int wayPointEnd;
 
 }

@@ -141,8 +141,10 @@ public class RequestController {
         for (int i = 0; i < coordinatesArr.size(); i++) {
 
             answerCoordinates.add(new Coordinates(
-                                        coordinatesArr.get(i).getAsJsonArray().get(0).getAsString(),
-                                        coordinatesArr.get(i).getAsJsonArray().get(1).getAsString()
+//                                        coordinatesArr.get(i).getAsJsonArray().get(0).getAsString(),
+//                                        coordinatesArr.get(i).getAsJsonArray().get(1).getAsString()
+                                            coordinatesArr.get(i).getAsJsonArray().get(0).getAsDouble(),
+                                            coordinatesArr.get(i).getAsJsonArray().get(1).getAsDouble()
                                     ));
 
 //            log.warn("lon " + coordinatesArr.get(i).getAsJsonArray().get(0).getAsString()
@@ -167,7 +169,8 @@ public class RequestController {
             JsonObject oneSegObj = segmentsArr.get(i).getAsJsonObject();
 
             RouteSegment routeSegment = new RouteSegment();
-            routeSegment.setDistance(oneSegObj.get("distance").getAsString());
+//            routeSegment.setDistance(oneSegObj.get("distance").getAsString());
+            routeSegment.setDistance(oneSegObj.get("distance").getAsDouble());
 
             JsonArray stepsArr = oneSegObj.get("steps").getAsJsonArray();
 
@@ -176,38 +179,82 @@ public class RequestController {
             // индекс координаты конца сегмента
             int indexCoordEnd = stepsArr.get(stepsArr.size() - 1).getAsJsonObject().get("way_points").getAsJsonArray().get(1).getAsInt();
 
+            routeSegment.setWayPointBegin(indexCoordBegin);
+            routeSegment.setWayPointEnd(indexCoordEnd);
+
             routeSegment.setCoordinatesBegin(answerCoordinates.get(indexCoordBegin));
             routeSegment.setCoordinatesEnd(answerCoordinates.get(indexCoordEnd));
 
+            // названия пока не заполняем
+            routeSegment.setPlacebegin("");
+            routeSegment.setPlaceend("");
 
-            // получим имена через запрос к геокодам
-            // начало сегмента
-            restUrl = "https://api.openrouteservice.org/geocode/reverse"
-                    + "?api_key=" + authToken
-                    + "&point.lon=" + answerCoordinates.get(indexCoordBegin).getLon()
-                    + "&point.lat=" + answerCoordinates.get(indexCoordBegin).getLat()
-                    + "&boundary.circle.radius=1&size=1";
-
-            String serverGeoAnswer = WebRequestUtil.sendRequest(restUrl, null,"get", null);
-//            log.warn(serverGeoAnswer);
-
-            routeSegment.setPlacebegin(getAddressFromGeoJsonAnswer(serverGeoAnswer));
-
-            // окончание сегмента
-            restUrl = "https://api.openrouteservice.org/geocode/reverse"
-                    + "?api_key=" + authToken
-                    + "&point.lon=" + answerCoordinates.get(indexCoordEnd).getLon()
-                    + "&point.lat=" + answerCoordinates.get(indexCoordEnd).getLat()
-                    + "&boundary.circle.radius=1&size=1";
-
-            serverGeoAnswer = WebRequestUtil.sendRequest(restUrl, null,"get", null);
-//            log.warn(serverGeoAnswer);
-
-            routeSegment.setPlaceend(getAddressFromGeoJsonAnswer(serverGeoAnswer));
 
             answerRouteSegments.add(routeSegment);
 
         }
+
+        // проверим количество сегментов
+        // если их более 10 то будем запрашивать только начало и конец маршрута
+        if (segmentsArr.size() <= 5) {
+            for (RouteSegment oneRoute : answerRouteSegments) {
+                // получим имена через запрос к геокодам
+                // начало сегмента
+                restUrl = "https://api.openrouteservice.org/geocode/reverse"
+                        + "?api_key=" + authToken
+                        + "&point.lon=" + oneRoute.getCoordinatesBegin().getLon()
+                        + "&point.lat=" + oneRoute.getCoordinatesBegin().getLat()
+                        + "&boundary.circle.radius=1&size=1";
+
+                String serverGeoAnswer = WebRequestUtil.sendRequest(restUrl, null,"get", null);
+
+                oneRoute.setPlacebegin(getAddressFromGeoJsonAnswer(serverGeoAnswer));
+
+                // окончание сегмента
+                restUrl = "https://api.openrouteservice.org/geocode/reverse"
+                        + "?api_key=" + authToken
+                        + "&point.lon=" + oneRoute.getCoordinatesEnd().getLon()
+                        + "&point.lat=" + oneRoute.getCoordinatesEnd().getLat()
+                        + "&boundary.circle.radius=1&size=1";
+
+                serverGeoAnswer = WebRequestUtil.sendRequest(restUrl, null,"get", null);
+
+                oneRoute.setPlaceend(getAddressFromGeoJsonAnswer(serverGeoAnswer));
+
+            }
+        } else {
+            // сегментов более 5, получим только начало и окончание, чтобы ускорить ответ сервиса
+
+            ///////////////////////////////
+            // начало маршрута
+            ///////////////////////////////
+
+            restUrl = "https://api.openrouteservice.org/geocode/reverse"
+                    + "?api_key=" + authToken
+                    + "&point.lon=" + answerRouteSegments.get(0).getCoordinatesBegin().getLon()
+                    + "&point.lat=" + answerRouteSegments.get(0).getCoordinatesBegin().getLat()
+                    + "&boundary.circle.radius=1&size=1";
+
+            String serverGeoAnswer = WebRequestUtil.sendRequest(restUrl, null,"get", null);
+
+            answerRouteSegments.get(0).setPlacebegin(getAddressFromGeoJsonAnswer(serverGeoAnswer));
+
+            ///////////////////////////////
+            // окончание маршрута
+            ///////////////////////////////
+
+            restUrl = "https://api.openrouteservice.org/geocode/reverse"
+                    + "?api_key=" + authToken
+                    + "&point.lon=" + answerRouteSegments.get(answerRouteSegments.size() - 1).getCoordinatesEnd().getLon()
+                    + "&point.lat=" + answerRouteSegments.get(answerRouteSegments.size() - 1).getCoordinatesEnd().getLat()
+                    + "&boundary.circle.radius=1&size=1";
+
+            serverGeoAnswer = WebRequestUtil.sendRequest(restUrl, null,"get", null);
+
+            answerRouteSegments.get(answerRouteSegments.size() - 1).setPlaceend(getAddressFromGeoJsonAnswer(serverGeoAnswer));
+
+        }
+
 
         return new RouteInfoDTO(answerRouteSegments, answerCoordinates);
     }

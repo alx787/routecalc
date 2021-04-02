@@ -18,13 +18,13 @@
 	padding: 5px 0;
 }
 
-#slidebtn {
+#btnslide {
 	position: absolute; 
 	top: 1px; 
 	left: 575px;
 }
 
-#slidebtn:hover {
+#btnslide:hover {
 	cursor: pointer;
 }
 
@@ -52,17 +52,23 @@
 
 .column30px {
 	float: left; 
-	width: 30px
+	width: 30px;
+	height: 15px;
+	overflow: hidden;
 }
 
 .column60px {
 	float: left; 
-	width: 60px
+	width: 60px;
+	height: 15px;
+	overflow: hidden;
 }
 
 .column200px {
 	float: left; 
-	width: 200px
+	width: 210px;
+	height: 15px;
+	overflow: hidden;
 }
 
 .routeaddress {
@@ -79,6 +85,22 @@
 	border: 1px solid #0092DA; 
 	background-color: #000000; 
 	color: #FFF;
+}
+
+#datacontainer {
+	list-style-type: none;
+	padding: 0;
+	margin: 0
+}
+
+#datacontainer li {
+	margin-left: 2px;
+	height: 15px;
+}
+
+#datacontainer li:hover {
+	background-color: #c6bdf7;
+	cursor: pointer;
 }
 
 button:hover {

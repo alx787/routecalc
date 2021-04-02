@@ -11,6 +11,11 @@ main.module = (function() {
       */    
 
 
+    // данные о сегментах полученные с сервера сохраняем
+    var routingdata = {};
+
+    var windowVisible = true;
+
 	// заполнение списка выбора подразделений
 	var initDepartSelect = function() {
 
@@ -25,9 +30,32 @@ main.module = (function() {
 
 	}
 
+	// убрать - показать окно
+	var switchWindowVisible = function() {
+		var leftShow = 8;
+		var leftHide = -575;
+
+		if (windowVisible) {
+			// $("#wrapper").css("left", leftHide});
+			$("#wrapper").animate({"left": leftHide});
+			windowVisible = false;
+		} else {
+			// $("#wrapper").css("left", leftShow);
+			$("#wrapper").animate({"left": leftShow});
+			windowVisible = true;
+		}
+	}
 
 	// события нажатий на кнопки
 	var initButtonEvents = function() {
+
+
+
+		// убрать - показать окно
+		$("#btnslide").on("click", function() {
+			switchWindowVisible();
+		});
+
 
 
 		// переход на подразделение на карте
@@ -56,15 +84,31 @@ main.module = (function() {
 		// очистить слой от всего
 		$("#btnclear").on("click", function() {
 			osm.module.clearPoints();
+			osm.module.clearSegments();
+			clearSegmentsList();
 		});
 
 
 		// запрос маршрута
 		$("#btncalc").on("click", function() {
-
+			getRouting(0);
 		});
 
 
+		// копирование параметров маршрута в буфер
+		$("#btncopy").on("click", function() {
+			var tmpHTML = $("<textarea>");
+
+			var tmpObj = {};
+			tmpObj.placebegin = $("#routebegin").val();
+			tmpObj.placeend = $("#routeend").val();
+			tmpObj.distance = $("#distance").val();
+
+			$("body").append(tmpHTML);
+			tmpHTML.val(JSON.stringify(tmpObj)).select();
+			document.execCommand("copy");
+			tmpHTML.remove();
+		});
 
 
 	}
@@ -92,161 +136,80 @@ main.module = (function() {
 //            function getRouting(cordsJsonAT, typeProfile){
 	var getRouting = function(typeProfile){
 
-		// пересылаемые данные
-		var sendingData = "";
+		var payloadArr = osm.module.getPointsWithCoords();
 
 
-		var payload = {};
-		var coords = [];
-
-		var points = map.layers[1].features;
-		var pointsCnt = map.layers[1].features.length;
-		//for (var i = pointsCnt - 1; i >= 0; i--) {
-		//    coords.push([points[i].attributes.lon, points[i].attributes.lat]);
-		//};
-		for (var i = 0; i < pointsCnt; i++) {
-			coords.push([points[i].attributes.lon, points[i].attributes.lat]);
-		};
-
-		if (coords.length == 0) {
+		if (payloadArr.length == 0) {
+			alert("Не найдены точки для рассчета маршрута")
 			return false;
 		}
 
-		payload.coordinates = coords;
-		payload.language = "ru";
-		sendingData = JSON.stringify(payload);
-
-		console.log(payload);
-		console.log(sendingData);
-
-
-
-		// запросить маршрутизацию
-		var directionsProfile = "driving-car";
-
-		if (typeProfile != null) {
-			switch(typeProfile) {
-				case 0:
-					directionsProfile = "driving-car";
-					break;
-				case 1:
-					directionsProfile = "driving-hgv";
-					break;
-				case 2:
-					directionsProfile = "cycling-regular";
-					break;
-				case 3:
-					directionsProfile = "cycling-road";
-					break;
-				case 4:
-					directionsProfile = "cycling-mountain";
-					break;
-				case 5:
-					directionsProfile = "cycling-electric";
-					break;
-				case 6:
-					directionsProfile = "foot-walking";
-					break;
-				case 7:
-					directionsProfile = "foot-hiking";
-					break;
-				case 8:
-					directionsProfile = "wheelchair";
-					break;
-				default:
-					directionsProfile = "driving-car";
-
-			}
-
+		if (payloadArr.length == 1) {
+			alert("Не достаточно точек для рассчета маршрута")
+			return false;
 		}
 
+		// console.log(payload);
+		// console.log(sendingData);
 
-
-		var authtoken = "5b3ce3597851110001cf62481da20da8c69d47249228088761e1cade";
-
-		var restUrl = "https://api.openrouteservice.org/v2/directions/" + directionsProfile + "/geojson";
-
-		//var restUrl = "https://api.openrouteservice.org/v2/directions/foot-walking/geojson";
+		// запросить маршрутизацию
+		// var restUrl = "https://api.openrouteservice.org/v2/directions/driving-car/geojson";
+		var restUrl = "route/find";
 
 		$.ajax({
 			url: restUrl,
 			type: 'post',
-			headers: {"Authorization": authtoken},
+			// headers: {"Authorization": authtoken},
 			enctype: 'multipart/form-data',
 			//processData: false,  // Important!
 			dataType: 'json',
-			data: sendingData,
-			//data: payload,
-			//data: formDataTicket,
+			data: JSON.stringify(payloadArr),
 			cache: false,
-			async: false,
+			async: true,
 			// async: asyncFlag,
 			contentType: "application/json; charset=utf-8",
 			//contentType: false,
 			crossDomain: true,
 			success: function (data) {
 
-				console.log(data);
+				// console.log(data);
+				// console.log(JSON.stringify(data));
+
+				// сохранить данные
+				routingdata = data;
 
 				// отрисовка линий
-				coordsArr = data.features[0].geometry.coordinates;
+				coordsArr = data.coordinates;
 				for (var i = 0; i < coordsArr.length - 1; i++) {
-					addLine(coordsArr[i][0], coordsArr[i][1], coordsArr[i + 1][0], coordsArr[i + 1][1], map.layers[1], "#0500bd");
+					osm.module.addLine(coordsArr[i].lon, coordsArr[i].lat, coordsArr[i + 1].lon, coordsArr[i + 1].lat, "#0500bd", "route");
 				}
 
+				// заполнение таблицы сегментов
+				fillSegmentsList(data.segments);
 
-				/*
-                routeN : {
-                    name: "точка 1 - точка 4",
-                    distance: 145,
-                    coordsbeg: [lon, lat],
-                    coordsend: [lon, lat],
-                    namebeg: "начало ....",
-                    nameend: "конец ....",
 
-                */
-				// массив маршрутов с координатами всех точек
-				routeArr = [];
 
-				var segments = data.features[0].properties.segments;
-				// обходим сегменты
-				for (var i = 0; i < segments.length; i++) {
-					oneroute = {};
-
-					//oneroute.name = (i + 1).toString() + " - " + (i + 1 + 1).toString();
-					oneroute.name = (i + 1).toString();
-					oneroute.distance = segments[i].distance;
-
-					// шаги сегмента
-					var steps = segments.steps;
-
-					oneroute.coordsbeg = coordsArr[segments[i].steps[0].way_points[0]];
-					oneroute.coordsend = coordsArr[segments[i].steps[segments[i].steps.length - 1].way_points[1]];
-
-					oneroute.namebeg = getPlaceFromCoords(oneroute.coordsbeg[0], oneroute.coordsbeg[1]);
-					oneroute.nameend = getPlaceFromCoords(oneroute.coordsend[0], oneroute.coordsend[1]);
-					//oneroute.namebeg = "-";
-					//oneroute.nameend = "-";
-
-					routeArr.push(oneroute);
-
-				}
-
-				totalDistanse = data.features[0].properties.summary.distance;
-
-				//data.features[0].geometry.coordinates
-				console.log("расстояние");
-				console.log(data.features[0].properties.summary.distance);
-
-				console.log("координаты");
-				console.log(coordsArr);
-
-				console.log("сегменты");
-				console.log(routeArr);
-
+				// так выглядит объект описывающий сегмент
+				// coordinatesBegin: {
+				// 						lat: 58.606832
+				// 						lon: 49.601229
+				// 					}
+				//
+				// coordinatesEnd: {
+				// 						lat: 58.607549
+				// 						lon: 49.61118
+				// distance: 801.1
+				// name: null
+				// placebegin: "Ключ здоровья, Kirov, Kirov"
+				// placeend: "27 улица Ломоносова, Kirov, Kirov"
 			},
 			error: function (data) {
+
+				routingdata = {};
+
 				console.log("ошибка при получении данных с сервера");
+				console.log(data);
+				alert("ошибка при получении данных с сервера")
 			},
 			complete: function () {
 
@@ -257,8 +220,146 @@ main.module = (function() {
 	}
 
 
+	// для тестирования
+	var __getRouting = function(typeProfile){
+		var data = test.module.getTestData();
+
+		console.log(data);
+		console.log(JSON.stringify(data));
+
+		// сохранить данные
+		routingdata = data;
+
+		// отрисовка линий
+		coordsArr = data.coordinates;
+		for (var i = 0; i < coordsArr.length - 1; i++) {
+			osm.module.addLine(coordsArr[i].lon, coordsArr[i].lat, coordsArr[i + 1].lon, coordsArr[i + 1].lat, "#0500bd", "route");
+		}
+
+		// заполнение таблицы сегментов
+		fillSegmentsList(data.segments);
+	}
 
 
+
+
+	// получить заполненную строку
+	var renderRow = function(name, addrbeg, addrend, distance, coordbeglon, coordbeglat, coordendlon, coordendlat) {
+
+		var rowTemplate = '<li>'
+							+ '<div class="column30px">&nbsp;</div>'
+							+ '<div class="column60px">__name__</div>'
+							+ '<div class="column200px">__addrbeg__</div>'
+							+ '<div class="column200px">__addrend__</div>'
+							+ '<div class="column60px" style="text-align: right;">__distance__</div>'
+							+ '<div style="display: none">__coordbeglon__</div>'
+							+ '<div style="display: none">__coordbeglat__</div>'
+							+ '<div style="display: none">__coordendlon__</div>'
+							+ '<div style="display: none">__coordendlat__</div>'
+						+ '</li>';
+
+		var rowStr = rowTemplate;
+
+		rowStr = rowStr.replace("__name__", 					name);
+		rowStr = rowStr.replace("__addrbeg__", 		addrbeg);
+		rowStr = rowStr.replace("__addrend__", 		addrend);
+		rowStr = rowStr.replace("__distance__", 		distance);
+		rowStr = rowStr.replace("__coordbeglon__", 	coordbeglon);
+		rowStr = rowStr.replace("__coordbeglat__", 	coordbeglat);
+		rowStr = rowStr.replace("__coordendlon__", 	coordendlon);
+		rowStr = rowStr.replace("__coordendlat__", 	coordendlat);
+
+		return rowStr;
+	}
+
+
+	// очистить список сегментов
+	var clearSegmentsList = function() {
+		$("#datacontainer").empty();
+		$("#routebegin").val("");
+		$("#routeend").val("");
+		$("#distance").val("");
+
+	}
+
+
+	// заполнить список сегментов маршрута
+	var fillSegmentsList = function(segmentsArray) {
+
+		var objContainer = $("#datacontainer");
+
+		clearSegmentsList();
+
+		var oneRow = "";
+
+		var distance = 0;
+
+
+		for (var i = 0; i < segmentsArray.length; i++) {
+			oneRow = renderRow(i + 1,
+								segmentsArray[i].placebegin,
+								segmentsArray[i].placeend,
+								(segmentsArray[i].distance / 1000).toFixed(2),
+								segmentsArray[i].coordinatesBegin.lon,
+								segmentsArray[i].coordinatesBegin.lat,
+								segmentsArray[i].coordinatesEnd.lon,
+								segmentsArray[i].coordinatesEnd.lat
+							);
+
+			objContainer.append(oneRow);
+
+			distance = distance + segmentsArray[i].distance;
+		}
+
+		distance = distance / 1000;
+
+		// заполним итоговые значения
+		$("#routebegin").val(segmentsArray[0].placebegin);
+		$("#routeend").val(segmentsArray[segmentsArray.length - 1].placeend);
+		$("#distance").val(distance.toFixed(2));
+
+
+
+		// сейчас нужно навесить на каждую строку обработчик нажатий мыши
+		var cnt = objContainer.children().length;
+		// цикл по li
+		for (var i = 0; i < cnt; i++) {
+			$(objContainer.children()[i]).on("click", function (e) {
+
+				$("#datacontainer li").css("color", "#000000");
+				$(this).css("color", "#FF0000");
+
+				var liChildren = $(this).children();
+
+				// для получения маршрута нужны дата начала, дата окончания и инв номер
+				// console.log(liChildren[1].innerText);
+
+
+				var segmentnumber = parseInt(liChildren[1].innerText) - 1;
+
+				if (segmentnumber < 0) {
+					alert("Ошибка получения номера сегмента маршрута")
+					return false;
+				}
+
+				osm.module.clearSegments();
+
+				// рисуем сегмент
+				for (var ii = routingdata.segments[segmentnumber].wayPointBegin; ii < routingdata.segments[segmentnumber].wayPointEnd; ii++){
+					osm.module.addLine(routingdata.coordinates[ii].lon, routingdata.coordinates[ii].lat, routingdata.coordinates[ii + 1].lon, routingdata.coordinates[ii + 1].lat,"#FF0000", "segment");
+				}
+
+
+				// console.log(liChildren[7]);
+				// console.log(liChildren[8]);
+				// console.log(liChildren[9]);
+				// console.log(liChildren[10]);
+
+			})
+		}
+
+
+	}
 
 
 
@@ -269,7 +370,8 @@ main.module = (function() {
 
 	return {
 		initDepartSelect:initDepartSelect,
-		initButtonEvents:initButtonEvents
+		initButtonEvents:initButtonEvents,
+		switchWindowVisible:switchWindowVisible
 	}
 
 

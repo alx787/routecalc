@@ -10,10 +10,12 @@ public class Coordinates {
 
     @Getter
     @Setter
-    private String lon;
+    private Double lon;
+//    private String lon;
 
     @Getter
     @Setter
-    private String lat;
+    private Double lat;
+//    private String lat;
 
 }

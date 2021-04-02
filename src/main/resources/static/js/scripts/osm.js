@@ -140,6 +140,28 @@ osm.module = (function () {
         map.addLayer(vectorImage);
 
 
+        // еще один слой для отрисовки выделенного сегмента маршрута
+        var stylePointTrack = new OpenLayers.Style(
+            {
+                pointRadius: 10,
+                strokeColor: "blue",
+                strokeWidth: 5,
+                fillColor: "black",
+                labelYOffset: 20,
+                label: "${label}",
+                fontSize: 16
+            });
+
+        var layerTracks = new OpenLayers.Layer.Vector("Tracks", {
+            styleMap: new OpenLayers.StyleMap(
+                { "default": stylePointTrack,
+                    "select": { pointRadius: 20}
+                })
+        });
+
+        map.addLayer(layerTracks);
+
+
 
         /////////////////////////////////////////////////
         // click handler begin           
@@ -253,7 +275,15 @@ osm.module = (function () {
 
     //Предполагаемый форма данных: координаты разделены точкой с запятой, долгота с широтой разделены пробелом
     //function addLine(lon1, lat1, lon2, lat2, title, ident, layr) {
-    var addLine = function(lon1, lat1, lon2, lat2, layer, color) {
+    // var addLine = function(lon1, lat1, lon2, lat2, layer, color) {
+    var addLine = function(lon1, lat1, lon2, lat2, color, whatdraw) {
+
+        var layer = map.layers[1];
+
+        if (whatdraw == "segment") {
+            layer = map.layers[3];
+        }
+
         var featuress = Array();
 
         var point1 = new OpenLayers.Geometry.Point(lon1, lat1);
@@ -284,6 +314,9 @@ osm.module = (function () {
         map.layers[1].removeAllFeatures();
     }
 
+    var clearSegments = function(){
+        map.layers[3].removeAllFeatures();
+    }
 
     // перемещения карты по координатам
     // вариант с аргументами moveToPlace(lon, lat)
@@ -297,13 +330,36 @@ osm.module = (function () {
         
     }
 
+    var getPointsWithCoords = function() {
+        var payloadArr = [];
+        var coords = {};
 
+        var points = map.layers[1].features;
+        var pointsCnt = map.layers[1].features.length;
+        //for (var i = pointsCnt - 1; i >= 0; i--) {
+        //    coords.push([points[i].attributes.lon, points[i].attributes.lat]);
+        //};
+        for (var i = 0; i < pointsCnt; i++) {
+            coords = {};
+            coords.lon = points[i].attributes.lon;
+            coords.lat = points[i].attributes.lat;
+
+            payloadArr.push(coords);
+
+        };
+
+        return payloadArr;
+
+    }
 
 	return {
 		init:init,
 		addPoint:addPoint,
+        addLine:addLine,
 		clearPoints:clearPoints,
-		moveToPlace:moveToPlace
+        clearSegments:clearSegments,
+		moveToPlace:moveToPlace,
+        getPointsWithCoords:getPointsWithCoords
 
 	}
 
